@@ -60,5 +60,8 @@
 		"typescript",
 		"javascript",
 		"mayank1513"
-	]
+	],
+	"dependencies": {
+		"@types/chrome": "^0.0.326"
+	}
 }

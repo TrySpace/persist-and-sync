@@ -1,6 +1,6 @@
 import { StateCreator } from "zustand";
 
-export type StorageType = "localStorage" | "sessionStorage" | "cookies";
+export type StorageType = "localStorage" | "sessionStorage" | "cookies" | 'chromeLocalStorage';
 
 export interface PersistNSyncOptionsType {
 	name: string;
@@ -21,6 +21,14 @@ type PersistNSyncType = <T>(
 const DEFAULT_INIT_DELAY = 100;
 
 function getItem(options: PersistNSyncOptionsType) {
+	const { storage } = options;
+  if (storage === 'chromeLocalStorage' && chrome) {
+    return new Promise<string | null>((resolve) => {
+      chrome.storage.local.get(options.name, (result) => {
+        resolve(result[options.name] || null);
+      });
+    });
+  }
 	const cookies = document.cookie.split("; ");
 	const cookie = cookies.find(c => c.startsWith(options.name));
 	return (
@@ -36,6 +44,13 @@ function setItem(options: PersistNSyncOptionsType, value: string) {
 		document.cookie = `${options.name}=${value}; max-age=31536000; SameSite=Strict;`;
 	}
 	if (storage === "sessionStorage") sessionStorage.setItem(options.name, value);
+  if (storage === "chromeLocalStorage") {
+    if (chrome) {
+      chrome.storage.local.set({ [options.name]: value });
+    } else {
+      throw new Error("chromeLocalStorage is only available in chrome extension environment");
+    }
+  }
 	else localStorage.setItem(options.name, value);
 }
 
@@ -49,6 +64,13 @@ export function clearStorage(name: string, storage?: StorageType) {
 			break;
 		case "cookies":
 			document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Strict;`;
+      break;
+    case "chromeLocalStorage":
+      if (chrome) {
+        chrome.storage.local.remove(name, () => { });
+      } else {
+        throw new Error("chromeLocalStorage is only available in chrome extension environment");
+      }
 			break;
 		default:
 	}
